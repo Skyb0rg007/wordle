@@ -1,8 +1,10 @@
-#include <array>
-#include <cassert>
-#include <iostream>
 #include <algorithm>
+#include <array>
 #include <bit>
+#include <cassert>
+#include <cstdint>
+#include <iostream>
+#include <optional>
 #include <wordle.hpp>
 
 namespace wordle {

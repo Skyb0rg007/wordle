@@ -1,8 +1,8 @@
-#include <iostream>
+#include <algorithm>
 #include <fstream>
+#include <iostream>
 #include <optional>
 #include <string>
-#include <algorithm>
 #include <vector>
 #include <wordle.hpp>
 
@@ -50,7 +50,7 @@ int main(int argc, char *argv[]) {
     auto response = build_response(secret, guess);
     history.emplace_back(guess, response);
     state.update(guess, response);
-    // std::clog << state << std::endl;
+    std::clog << state << std::endl;
 
     auto final = state.final();
     if (final.has_value() && final.value() == guess) {
