@@ -1,0 +1,1 @@
+The words.txt file was taken from the wordle project [here](https://github.com/coolbutuseless/wordle).
