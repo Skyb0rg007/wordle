@@ -53,6 +53,7 @@ std::ostream& operator<<(std::ostream& out, const Response &r);
 class State {
 public:
   State();
+  State(const State& s) : yellow(s.yellow), green(s.green) {}
 
   // Update the state to account for the guess and response
   // Returns false if the pair is nonsensical

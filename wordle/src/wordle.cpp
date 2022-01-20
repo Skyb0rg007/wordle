@@ -96,7 +96,11 @@ std::ostream& Response::write_ansi(std::ostream &out, const Word& w) const {
   return out;
 }
 
-State::State() : yellow(), green() {}
+State::State() : yellow(), green() {
+  for (auto g : green) {
+    assert(g == 0xff);
+  }
+}
 
 bool State::update(const Word &w, const Response &r) {
   std::array<uint8_t, 26> w_occurs{};
@@ -144,6 +148,10 @@ bool State::update(const Word &w, const Response &r) {
         break;
       case Color::GREEN:
         // If green, set the output and possibly update bounds
+        if (green[i] == w[i]) {
+          // Green already set
+          break;
+        }
         if (green[i] != 0xff) {
           // Conflicting green outputs
           return false;
@@ -153,12 +161,12 @@ bool State::update(const Word &w, const Response &r) {
         uint8_t occurs = std::count_if(
           green.begin(),
           green.end(),
-          [&w,i](uint8_t c) { return c == w[i]; });
+          [k=w[i]](uint8_t c) { return c == k; });
         // There can't be less than 2 'A's if there are two green 'A's
         yellow[w[i]].min = std::max(yellow[w[i]].min, occurs);
         // If there was a strict bound on a letter and they're all guessed, remove the others
-        // Ex. EERIE -> YY___; FLEES -> __GG_
-        // We would update 'E' from YY___ to YY__Y
+        // Ex. EERIE -> YY___ (This sets E strict bound 2); FLEES -> __GG_
+        // We would update 'E' from YY___ to YY__Y since we got all the 
         if (yellow[w[i]].strict && occurs == yellow[w[i]].min) {
           for (size_t j = 0; j < green.size(); j++) {
             if (green[j] != w[i]) {
@@ -171,32 +179,38 @@ bool State::update(const Word &w, const Response &r) {
   }
 
   // Deduce colors
-  for (uint8_t i = 0; i < 26; i++) {
-    // Ex. EERIE -> YY___, so E: XX__X 2+
-    // Therefore word must have __EE__
-    if (5 - yellow[i].min == std::popcount(yellow[i].indices)) {
-      for (uint8_t j = 0; j < green.size(); j++) {
-        if ((yellow[i].indices & (1 << j)) == 0) {
-          green[j] = i;
-        }
-      }
-    }
-  }
+  // for (uint8_t i = 0; i < 26; i++) {
+  //   // Ex. EERIE -> YY___, so E: XX__X 2+
+  //   // Therefore word must have __EE__
+  //   if (5 - yellow[i].min == std::popcount(yellow[i].indices)) {
+  //     for (uint8_t j = 0; j < green.size(); j++) {
+  //       if ((yellow[i].indices & (1 << j)) == 0) {
+  //         green[j] = i;
+  //       }
+  //     }
+  //   }
+  // }
   return true;
 }
 
+static constexpr bool debug_match = true;
+
 bool State::matches(const Word &w) const {
+  // std::clog << "Entering matches for " << w << std::endl;
   // All greens match
   for (size_t i = 0; i < w.size(); i++) {
     if (green[i] != 0xff && green[i] != w[i]) {
+      // std::clog << "Doesn't match green: " << green << "[" << i << "] != " << w << "[" << i << "]" << std::endl; 
       return false;
     }
   }
 
   // No yellows match
   for (size_t i = 0; i < w.size(); i++) {
-    if (yellow[w[i]].indices & (1 << i))
+    if (yellow[w[i]].indices & (1 << i)) {
+      // std::clog << "Doesn't match yellow: " << w << ",  letter " << char('A' + w[i]) << " at index " << i << std::endl;
       return false;
+    }
   }
 
   // Each occurrance is compatible
@@ -206,10 +220,14 @@ bool State::matches(const Word &w) const {
   }
   for (uint8_t i = 0; i < 26; i++) {
     if (occurs[i] < yellow[i].min || (occurs[i] > yellow[i].min && yellow[i].strict)) {
+      // std::clog << "Doesn't match min: letter " << char('A' + w[i]) << " should appear " << yellow[i].min << " times";
+      // if (yellow[i].strict)
+      //   std::clog << " (strictly)";
+      // std::clog << std::endl;
       return false;
     }
   }
-
+  // std::clog << "Returning true for " << w << std::endl;
   return true;
 }
 
