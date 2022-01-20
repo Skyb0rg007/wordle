@@ -7,6 +7,19 @@
 
 namespace wordle {
 
+Word::Word() {
+    std::fill(begin(), end(), 0xff);
+}
+
+Word::Word(const char *word) {
+  for (auto &c : *this) {
+    if (*word < 'A' || 'Z' < *word) {
+      throw new std::runtime_error("Invalid word");
+    }
+    c = *word++ - 'A';
+  }
+}
+
 std::ostream& wordle::operator<<(std::ostream& out, const Word& w) {
   for (uint8_t i : w) {
     if (i == 0xff) {

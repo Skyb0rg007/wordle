@@ -19,17 +19,11 @@ namespace wordle {
 // Invalid/Underscore characters are stored as 0xff
 class Word : public std::array<uint8_t, 5> {
 public:
-  Word() {
-    std::fill(begin(), end(), 0xff);
-  }
-  Word(const char *word) {
-    for (auto &c : *this) {
-      if (*word < 'A' || 'Z' < *word) {
-        throw new std::runtime_error("Invalid word");
-      }
-      c = *word++ - 'A';
-    }
-  }
+  // Construct a word with all underscores
+  Word();
+  // Construct a word from an ASCII-encoded string
+  // Throws a runtime error if any char at index 0-4 isn't A-Z
+  Word(const char *word);
 };
 
 std::ostream& operator<<(std::ostream& out, const Word& w);
