@@ -1,6 +1,12 @@
 # A simple Wordle implementation
 
-I hope to use this to create the perfect absurdle implementation
+I hope to use this to create the perfect absurdle implementation.
+
+Note: This implementation uses a compact State representation.
+
+This is important for state-searching since only 31 bytes are used for each state,
+and only 5 bytes for each word. This greatly reduces memory usage, and is faster than
+maintaining and merging a list of previous results.
 
 ### Building and running
 

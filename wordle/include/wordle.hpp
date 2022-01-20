@@ -1,3 +1,9 @@
+// wordle.hpp
+// This file defines classes for working with Wordle.
+// Some are simply wrappers around std::array.
+// This is to add additional methods, and to override
+// operator<< for printing.
+
 #pragma once
 
 #include <array>
@@ -10,35 +16,20 @@ namespace wordle {
 
 // 5-letter words
 // Stored with A->0, Z->26 instead of ASCII
-class Word {
+// Invalid/Underscore characters are stored as 0xff
+class Word : public std::array<uint8_t, 5> {
 public:
-  using iterator = std::array<uint8_t, 5>::iterator;
-  using const_iterator = std::array<uint8_t, 5>::const_iterator;
-
   Word() {
-    std::fill(data.begin(), data.end(), 0xff);
+    std::fill(begin(), end(), 0xff);
   }
   Word(const char *word) {
-    for (auto &c : data) {
-      assert('A' <= *word && *word <= 'Z');
+    for (auto &c : *this) {
+      if (*word < 'A' || 'Z' < *word) {
+        throw new std::runtime_error("Invalid word");
+      }
       c = *word++ - 'A';
     }
   }
-  Word(uint8_t c1, uint8_t c2, uint8_t c3, uint8_t c4, uint8_t c5) :
-    data({c1, c2, c3, c4, c5}) {}
-
-  bool operator==(const Word &w) const { return this->data == w.data; }
-  bool operator!=(const Word &w) const { return this->data != w.data; }
-
-  uint8_t& operator[](size_t i) { return data.at(i); }
-  const uint8_t &operator[](size_t i) const { return data.at(i); }
-  constexpr iterator begin() { return data.begin(); }
-  constexpr iterator end() { return data.end(); }
-  constexpr const_iterator begin() const { return data.begin(); }
-  constexpr const_iterator end() const { return data.end(); }
-  constexpr size_t size() const { return data.size(); }
-private:
-  std::array<uint8_t, 5> data;
 };
 
 std::ostream& operator<<(std::ostream& out, const Word& w);

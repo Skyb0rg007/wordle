@@ -91,8 +91,11 @@ static std::optional<wordle::Word> input(const std::vector<wordle::Word>& wordli
       return std::nullopt;
     }
 
-    if (line.size() != 5) {
+    if (line.size() > 5) {
       std::cout << "Invalid line: too many characters" << std::endl;
+      continue;
+    } else if (line.size() < 5) {
+      std::cout << "Invalid line: too few characters" << std::endl;
       continue;
     }
 
