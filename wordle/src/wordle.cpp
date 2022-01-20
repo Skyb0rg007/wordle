@@ -40,6 +40,22 @@ std::ostream& wordle::operator<<(std::ostream& out, const Response &r) {
   return out;
 }
 
+Response::Response() {
+  std::fill(begin(), end(), Color::GRAY);
+}
+
+bool Response::next_combination() {
+  for (auto it = rbegin(); it != rend(); it++) {
+    if (*it == Color::GREEN) {
+      *it = Color::GRAY;
+    } else {
+      *it = Color(uint8_t(*it) + 1);
+      return true;
+    }
+  }
+  return false;
+}
+
 std::ostream& Response::write_ansi(std::ostream &out, const Word& w) {
   for (size_t i = 0; i < w.size(); i++) {
     const char *code = "";

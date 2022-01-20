@@ -46,6 +46,9 @@ std::ostream& operator<<(std::ostream& out, Color c);
 // Response sent back from the computer
 class Response : public std::array<Color, 5> {
 public:
+  Response();
+  // Produces the next combination. Returns false if there is no next combination.
+  bool next_combination();
   // Prints the word with ANSI colors based on the response
   std::ostream& write_ansi(std::ostream &out, const Word& w);
 };
