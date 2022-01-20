@@ -46,17 +46,22 @@ Response::Response() {
 
 bool Response::next_combination() {
   for (auto it = rbegin(); it != rend(); it++) {
-    if (*it == Color::GREEN) {
-      *it = Color::GRAY;
-    } else {
-      *it = Color(uint8_t(*it) + 1);
-      return true;
+    switch (*it) {
+      case Color::GRAY:
+        *it = Color::YELLOW;
+        return true;
+      case Color::YELLOW:
+        *it = Color::GREEN;
+        return true;
+      case Color::GREEN:
+        *it = Color::GRAY;
+        break;
     }
   }
   return false;
 }
 
-std::ostream& Response::write_ansi(std::ostream &out, const Word& w) {
+std::ostream& Response::write_ansi(std::ostream &out, const Word& w) const {
   for (size_t i = 0; i < w.size(); i++) {
     const char *code = "";
     switch (at(i)) {

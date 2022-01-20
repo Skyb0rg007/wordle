@@ -50,7 +50,7 @@ public:
   // Produces the next combination. Returns false if there is no next combination.
   bool next_combination();
   // Prints the word with ANSI colors based on the response
-  std::ostream& write_ansi(std::ostream &out, const Word& w);
+  std::ostream& write_ansi(std::ostream &out, const Word& w) const;
 };
 
 std::ostream& operator<<(std::ostream& out, const Response &r);
