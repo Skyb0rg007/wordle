@@ -23,6 +23,9 @@ public:
   // Construct a word from an ASCII-encoded string
   // Throws a runtime error if any char at index 0-4 isn't A-Z
   Word(const char *word);
+
+  std::ostream& serialize(std::ostream& out) const;
+  static Word deserialize(std::istream& in);
 };
 
 std::ostream& operator<<(std::ostream& out, const Word& w);
@@ -66,6 +69,12 @@ public:
 
   // Returns the built-up green word, or nullopt if it's incomplete
   std::optional<Word> final() const;
+
+  bool operator==(const State& s) const;
+  bool operator!=(const State& s) const;
+
+  std::ostream& serialize(std::ostream& out) const;
+  static State deserialize(std::istream& in);
 private:
   friend std::ostream& operator<<(std::ostream& out, const State& s);
   struct Yellow {
@@ -78,5 +87,19 @@ private:
 };
 
 std::ostream& operator<<(std::ostream& out, const State& s);
-
 }
+
+template<>
+struct std::hash<wordle::Word> {
+    size_t operator()(const wordle::Word&) const noexcept;
+};
+
+template<>
+struct std::hash<wordle::Response> {
+    size_t operator()(const wordle::Response&) const noexcept;
+};
+
+template<>
+struct std::hash<wordle::State> {
+    size_t operator()(const wordle::State&) const noexcept;
+};

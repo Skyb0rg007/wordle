@@ -1,26 +1,32 @@
 #include <algorithm>
+#include <cstring>
+#include <ctime>
 #include <fstream>
 #include <iostream>
+#include <memory>
 #include <optional>
 #include <string>
 #include <vector>
-#include <memory>
 #include <wordle.hpp>
+#include <resources.hpp>
+#include <solver.hpp>
 
-static std::optional<wordle::Word> input(const std::vector<wordle::Word>& wordlist);
-static std::vector<wordle::Word> load_wordlist(const char *filename);
+int main() {
+    run();
+}
+
+static std::optional<wordle::Word> input();
 
 class Strategy {
 public:
-  Strategy(const std::vector<wordle::Word>& wl) : wordlist(wl) {}
+  Strategy() {}
+  virtual ~Strategy() {};
   virtual wordle::Response respond(const wordle::State& state, const wordle::Word& guess) = 0;
-protected:
-  const std::vector<wordle::Word>& wordlist;
 };
 
 class Standard : public Strategy {
 public:
-  Standard(const std::vector<wordle::Word>& wl);
+  Standard();
   wordle::Response respond(const wordle::State&, const wordle::Word& guess) override;
   wordle::Word get_secret() const { return secret; }
 private:
@@ -29,34 +35,27 @@ private:
 
 class Absurd : public Strategy {
 public:
-  Absurd(const std::vector<wordle::Word>& wl);
+  Absurd();
   wordle::Response respond(const wordle::State&, const wordle::Word& guess) override;
 };
 
-int main(int argc, char *argv[]) {
+int driver_main(int argc, char *argv[]) {
   std::srand(std::time(nullptr));
 
   // Argument parsing
   auto usage = [progname=argv[0]]() {
-    std::cerr << "Usage: " << progname << " <strategy> <wordlist>" << std::endl;
+    std::cerr << "Usage: " << progname << " <strategy>" << std::endl;
   };
-  if (argc < 3) {
+  if (argc < 2) {
     usage();
-    return 1;
-  }
-  const char *filename = argv[2];
-
-  auto wordlist = load_wordlist(filename);
-  if (wordlist.size() == 0) {
-    std::cerr << "Error loading wordlist" << std::endl;
     return 1;
   }
 
   std::unique_ptr<Strategy> strat;
   if (std::strcmp(argv[1], "standard") == 0) {
-    strat = std::make_unique<Standard>(wordlist);
+    strat = std::make_unique<Standard>();
   } else if (std::strcmp(argv[1], "absurd") == 0) {
-    strat = std::make_unique<Absurd>(wordlist);
+    strat = std::make_unique<Absurd>();
   } else {
     usage();
     return 1;
@@ -68,7 +67,7 @@ int main(int argc, char *argv[]) {
     for (auto [g, r] : history) {
       r.write_ansi(std::cout, g) << std::endl;
     }
-    auto w = input(wordlist);
+    auto w = input();
     if (!w.has_value()) {
       return 1;
     }
@@ -83,11 +82,13 @@ int main(int argc, char *argv[]) {
       break;
     }
 
-    if (auto std = dynamic_cast<Standard&>(*strat); !state.matches(std.get_secret())) {
-      std::clog << "Doesn't match secret!" << std::endl;
-      return 2;
-    } else {
-      std::clog << "Matches secret" << std::endl;
+    if (auto std = dynamic_cast<Standard*>(strat.get()); std != nullptr) {
+        if (!state.matches(std->get_secret())) {
+            std::clog << "Doesn't match secret!" << std::endl;
+            return 2;
+        } else {
+            std::clog << "Matches secret" << std::endl;
+        }
     }
 
     auto possible = std::find_if(
@@ -105,21 +106,7 @@ int main(int argc, char *argv[]) {
   return 0;
 }
 
-static std::vector<wordle::Word> load_wordlist(const char *filename)
-{
-  std::vector<wordle::Word> wordlist;
-  std::ifstream in(filename);
-  std::array<char, 6> buf{};
-  while (true) {
-    if (!in.read(buf.data(), buf.size())) {
-      break;
-    }
-    wordlist.emplace_back(buf.data());
-  } 
-  return wordlist;
-}
-
-static std::optional<wordle::Word> input(const std::vector<wordle::Word>& wordlist) {
+static std::optional<wordle::Word> input() {
   std::string line;
   wordle::Word guess;
   while (true) {
@@ -153,10 +140,8 @@ static std::optional<wordle::Word> input(const std::vector<wordle::Word>& wordli
   }
 }
 
-Standard::Standard(const std::vector<wordle::Word>& wl) : Strategy(wl) {
-  if (wl.size() == 0)
-    throw new std::runtime_error("Invalid wordlist!");
-  secret = wl[std::rand() % wl.size()];
+Standard::Standard() {
+  secret = wordlist[std::rand() % wordlist.size()];
   std::clog << "Secret: " << secret << std::endl;
 }
 
@@ -182,8 +167,7 @@ wordle::Response Standard::respond(const wordle::State& state, const wordle::Wor
   return r;
 }
 
-Absurd::Absurd(const std::vector<wordle::Word>& wl) : Strategy(wl) {
-}
+Absurd::Absurd() : Strategy() {}
 
 static int response_colors(const wordle::Response& r) {
   return std::count_if(

@@ -5,9 +5,10 @@
 #include <cstdint>
 #include <iostream>
 #include <optional>
+#include <cstring>
 #include <wordle.hpp>
 
-namespace wordle {
+using namespace wordle;
 
 Word::Word() {
     std::fill(begin(), end(), 0xff);
@@ -31,6 +32,21 @@ std::ostream& wordle::operator<<(std::ostream& out, const Word& w) {
     }
   }
   return out;
+}
+
+std::ostream& Word::serialize(std::ostream& out) const {
+    std::array<char, sizeof(Word)> buf;
+    std::memcpy(buf.data(), this, sizeof(Word));
+    out.write(buf.data(), buf.size());
+    return out;
+}
+
+Word Word::deserialize(std::istream& in) {
+    std::array<char, sizeof(Word)> buf;
+    in.read(buf.data(), buf.size());
+    Word w;
+    std::memcpy(&w, buf.data(), buf.size());
+    return w;
 }
 
 std::ostream& wordle::operator<<(std::ostream& out, Color c) {
@@ -179,28 +195,24 @@ bool State::update(const Word &w, const Response &r) {
   }
 
   // Deduce colors
-  // for (uint8_t i = 0; i < 26; i++) {
-  //   // Ex. EERIE -> YY___, so E: XX__X 2+
-  //   // Therefore word must have __EE__
-  //   if (5 - yellow[i].min == std::popcount(yellow[i].indices)) {
-  //     for (uint8_t j = 0; j < green.size(); j++) {
-  //       if ((yellow[i].indices & (1 << j)) == 0) {
-  //         green[j] = i;
-  //       }
-  //     }
-  //   }
-  // }
+  for (uint8_t i = 0; i < 26; i++) {
+    // Ex. EERIE -> YY___, so E: XX__X 2+
+    // Therefore word must have __EE__
+    if (5 - yellow[i].min == std::popcount(yellow[i].indices)) {
+      for (uint8_t j = 0; j < green.size(); j++) {
+        if ((yellow[i].indices & (1 << j)) == 0) {
+          green[j] = i;
+        }
+      }
+    }
+  }
   return true;
 }
 
-static constexpr bool debug_match = true;
-
 bool State::matches(const Word &w) const {
-  // std::clog << "Entering matches for " << w << std::endl;
   // All greens match
   for (size_t i = 0; i < w.size(); i++) {
     if (green[i] != 0xff && green[i] != w[i]) {
-      // std::clog << "Doesn't match green: " << green << "[" << i << "] != " << w << "[" << i << "]" << std::endl; 
       return false;
     }
   }
@@ -208,7 +220,6 @@ bool State::matches(const Word &w) const {
   // No yellows match
   for (size_t i = 0; i < w.size(); i++) {
     if (yellow[w[i]].indices & (1 << i)) {
-      // std::clog << "Doesn't match yellow: " << w << ",  letter " << char('A' + w[i]) << " at index " << i << std::endl;
       return false;
     }
   }
@@ -220,14 +231,9 @@ bool State::matches(const Word &w) const {
   }
   for (uint8_t i = 0; i < 26; i++) {
     if (occurs[i] < yellow[i].min || (occurs[i] > yellow[i].min && yellow[i].strict)) {
-      // std::clog << "Doesn't match min: letter " << char('A' + w[i]) << " should appear " << yellow[i].min << " times";
-      // if (yellow[i].strict)
-      //   std::clog << " (strictly)";
-      // std::clog << std::endl;
       return false;
     }
   }
-  // std::clog << "Returning true for " << w << std::endl;
   return true;
 }
 
@@ -236,6 +242,30 @@ std::optional<Word> State::final() const {
     return std::nullopt;
   }
   return green;
+}
+
+bool State::operator==(const State& s) const {
+    return std::memcmp(yellow.data(), s.yellow.data(), sizeof yellow) == 0
+        && green == s.green;
+}
+
+bool State::operator!=(const State& s) const {
+    return !(*this == s);
+}
+
+std::ostream& State::serialize(std::ostream& out) const {
+    std::array<char, sizeof(State)> buf;
+    std::memcpy(buf.data(), this, buf.size());
+    out.write(buf.data(), buf.size());
+    return out;
+}
+
+State State::deserialize(std::istream& in) {
+    std::array<char, sizeof(State)> buf;
+    in.read(buf.data(), buf.size());
+    State s;
+    std::memcpy(&s, buf.data(), buf.size());
+    return s;
 }
 
 std::ostream& wordle::operator<<(std::ostream& out, const State& s) {
@@ -262,4 +292,31 @@ std::ostream& wordle::operator<<(std::ostream& out, const State& s) {
   return out;
 }
 
+size_t std::hash<Word>::operator()(const Word& w) const noexcept {
+    size_t h = 0;
+    std::hash<uint8_t> hasher;
+    for (auto c : w) {
+        h ^= hasher(static_cast<uint8_t>(c)) + 0x9e3779b9 + (h << 6) + (h >> 2);
+    }
+    return h;
+}
+
+size_t std::hash<Response>::operator()(const Response& r) const noexcept {
+    size_t h = 0;
+    std::hash<uint8_t> hasher;
+    for (auto c : r) {
+        h ^= hasher(static_cast<uint8_t>(c)) + 0x9e3779b9 + (h << 6) + (h >> 2);
+    }
+    return h;
+}
+
+size_t std::hash<State>::operator()(const State& s) const noexcept {
+    std::array<char, sizeof(State)> buf;
+    std::memcpy(buf.data(), &s, sizeof buf);
+    size_t h = 0;
+    std::hash<char> hasher;
+    for (auto c : buf) {
+        h ^= hasher(c) + 0x9e3779b9 + (h << 6) + (h >> 2);
+    }
+    return h;
 }
